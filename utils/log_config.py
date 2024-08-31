@@ -15,21 +15,21 @@ def configure_logger():
         "%(asctime)s %(levelname)s %(message)s", "%Y-%m-%d %H:%M:%S"
     )
 
-    loki_handler = logging_loki.LokiHandler(
-        url=os.getenv("LOGGER_URL"),
-        tags={"application": os.getenv("LOGGER_APP")},
-        version="1",
-    )
+    # loki_handler = logging_loki.LokiHandler(
+    #     url=os.getenv("LOGGER_URL"),
+    #     tags={"application": os.getenv("LOGGER_APP")},
+    #     version="1",
+    # )
     console_handler = logging.StreamHandler()
     file_handler = logging.FileHandler(f"{logger_path}/{os.getenv('LOGGER_APP')}.log")
 
-    loki_handler.setFormatter(loki_formatter)
+    # loki_handler.setFormatter(loki_formatter)
     console_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
 
     logger = logging.getLogger(os.getenv("LOGGER_APP"))
     logger.setLevel(logging.INFO)
-    logger.addHandler(loki_handler)
+    # logger.addHandler(loki_handler)
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
     return logger
