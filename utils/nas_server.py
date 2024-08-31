@@ -1,7 +1,10 @@
 from smb.SMBConnection import OperationFailure, NotReadyError
 from smb.SMBConnection import SMBConnection
 from dotenv import load_dotenv
+from halo import Halo
+import threading
 import logging
+import time
 import os
 
 load_dotenv()
@@ -31,9 +34,14 @@ class NasServer:
         if not self.conn_status:
             return False
         try:
+            self.stop_event = threading.Event()
             for data in self.local_paths:
                 try:
                     skip_directories = ["venv", ".venv", "__pycache__"]
+                    my_spinner_thread = threading.Thread(
+                        target=self.my_spinner, args=(data["path"],)
+                    )
+                    my_spinner_thread.start()
                     if data["storage_type"] == "file":
                         self.save_file(data["path"], self.remote_save_path)
                     elif data["storage_type"] == "folder":
@@ -70,13 +78,25 @@ class NasServer:
                                     os.path.join(root, file_name), remote_save_path
                                 )
                 except OperationFailure as e:
+                    self.stop_event.set()
+                    my_spinner_thread.join()
                     self.logger.error(str(str(e)))
                     return False
-            self.logger.info(f"Data saved on NAS {os.getenv('NAS_SERVER')}")                
+            self.stop_event.set()
+            my_spinner_thread.join()
+            self.logger.info(f"Data saved on NAS {os.getenv('NAS_SERVER')}")
             return True
         except NotReadyError as e:
+            self.stop_event.set()
+            my_spinner_thread.join()
             self.logger.error("Auth failed for NAS server:", str(e))
             return False
+
+    def my_spinner(self, file_path):
+        spinner = Halo(text="Uploading to NAS server", spinner="dots")
+        spinner.start()
+        self.stop_event.wait()
+        spinner.stop()
 
     def save_file(self, file_path: str, save_path: str):
         with open(file_path, "rb") as binary_file:
